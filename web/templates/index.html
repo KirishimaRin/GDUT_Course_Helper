@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDUT 抢课助手</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="landing-page">
+    <div class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <div class="badge">GDUT 选课助手</div>
+            <h1>抢课从未如此简单</h1>
+            <p>自动监控 · 智能抢课 · 实时通知</p>
+            <a href="/import" class="btn btn-hero">开始使用</a>
+        </div>
+    </div>
+
+    <div class="features-section">
+        <div class="container">
+            <h2 class="section-title">核心功能</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>一键导入</h3>
+                    <p>只需复制 JSESSIONID，即可连接教务系统</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📋</div>
+                    <h3>课程浏览</h3>
+                    <p>查看所有可选课程，实时显示剩余名额</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>自动抢课</h3>
+                    <p>设置间隔自动抢课，支持多课程并发</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>状态追踪</h3>
+                    <p>实时显示抢课结果，成功失败一目了然</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="guide-section">
+        <div class="container">
+            <h2 class="section-title">使用指南</h2>
+            <div class="steps-container">
+                <div class="step-card">
+                    <div class="step-num">01</div>
+                    <div class="step-info">
+                        <h3>登录教务系统</h3>
+                        <p>在浏览器中访问 <a href="https://jxfw.gdut.edu.cn/" target="_blank">广东工业大学教务系统</a> 并完成登录</p>
+                    </div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-card">
+                    <div class="step-num">02</div>
+                    <div class="step-info">
+                        <h3>获取 JSESSIONID</h3>
+                        <p>按 <kbd>F12</kbd> 打开开发者工具，进入 <strong>Application → Cookies</strong>，复制 JSESSIONID 的值</p>
+                    </div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-card">
+                    <div class="step-num">03</div>
+                    <div class="step-info">
+                        <h3>选择课程并抢课</h3>
+                        <p>导入 JSESSIONID 后，浏览课程列表，添加到愿望清单，开始自动抢课</p>
+                    </div>
+                </div>
+            </div>
+            <div class="cta-container">
+                <a href="/import" class="btn btn-primary btn-lg">立即开始</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>GDUT 抢课助手 · 非官方工具 · 仅供学习交流</p>
+        </div>
+    </footer>
+</body>
+</html>

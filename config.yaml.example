@@ -1,0 +1,12 @@
+server:
+  port: 8080
+  host: localhost
+
+database:
+  path: ./data/course-grabber.db
+
+grabber:
+  concurrency: 3
+  max_retries: 5
+  base_delay: 1s
+  request_timeout: 30s

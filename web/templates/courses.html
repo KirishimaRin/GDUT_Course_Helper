@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>课程列表 - GDUT 抢课助手</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">GDUT 抢课助手</a>
+            <div class="nav-links">
+                <span id="statusIndicator" class="status-dot offline"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-container">
+        <!-- 未登录提示 -->
+        <div id="loginNotice" class="login-notice">
+            <div class="notice-icon">🔒</div>
+            <h2>未登录</h2>
+            <p>请先导入 JSESSIONID 登录教务系统</p>
+            <a href="/import" class="btn btn-primary">去登录</a>
+        </div>
+
+        <!-- 主内容区 -->
+        <div id="courseSection" class="app-layout" style="display: none;">
+            <!-- 左侧：课程列表 -->
+            <div class="main-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <h2>可选课程</h2>
+                        <span id="courseTotal" class="count-badge">0</span>
+                    </div>
+                    <div class="panel-tools">
+                        <div class="search-wrapper">
+                            <input type="text" id="searchInput" class="search-box" placeholder="搜索课程名称、教师...">
+                            <button id="clearSearch" class="btn-clear-search" onclick="clearSearch()" style="display:none;">×</button>
+                        </div>
+                        <button id="refreshBtn" class="btn btn-outline btn-small">
+                            <span class="btn-icon">↻</span> 刷新
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 选课信息栏 -->
+                <div id="semesterInfo" class="semester-info"></div>
+                
+                <div id="loading" class="loading-state" style="display: none;">
+                    <div class="spinner"></div>
+                    <span>正在加载课程...</span>
+                </div>
+                
+                <div id="courseList" class="table-wrapper"></div>
+            </div>
+
+            <!-- 中间：控制面板 -->
+            <div class="side-panel">
+                <!-- 愿望清单 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>愿望清单</h3>
+                        <span id="wishlistCount" class="count-badge small">0</span>
+                    </div>
+                    <div id="wishlist" class="wishlist-container"></div>
+                    <button id="clearWishlist" class="btn btn-ghost btn-small btn-full" style="display: none;">清空清单</button>
+                </div>
+
+                <!-- 抢课设置 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>抢课设置</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="input-group">
+                            <label>抢课间隔</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="interval" value="1" min="1" max="60">
+                                <span class="unit">秒</span>
+                            </div>
+                        </div>
+                        <button id="startGrabBtn" class="btn btn-primary btn-full">
+                            <span class="btn-icon">⚡</span> 开始抢课
+                        </button>
+                        <button id="stopGrabBtn" class="btn btn-danger btn-full" style="display: none;">
+                            <span class="btn-icon">⏹</span> 停止抢课
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 抢课日志 -->
+                <div class="card log-card">
+                    <div class="card-header">
+                        <h3>抢课日志</h3>
+                        <div class="log-actions">
+                            <span id="logCount" class="count-badge small">0</span>
+                            <button id="clearLogBtn" class="btn btn-ghost btn-tiny" title="清空日志">清空</button>
+                        </div>
+                    </div>
+                    <div id="grabResults" class="log-container">
+                        <div class="empty-log">
+                            <p>暂无日志</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：已选课程 -->
+            <div class="selected-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>已选课程</h3>
+                        <div class="log-actions">
+                            <span id="selectedCount" class="count-badge small">0</span>
+                            <button id="refreshSelectedBtn" class="btn btn-ghost btn-tiny">刷新</button>
+                        </div>
+                    </div>
+                    <div id="selectedCourses" class="selected-container">
+                        <div class="empty-log">
+                            <p>暂无已选课程</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 课程详情模态框 -->
+    <div id="courseDetailModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalCourseName">课程详情</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-row">
+                    <span class="detail-label">教师：</span>
+                    <span id="modalTeacher" class="detail-value"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">学分：</span>
+                    <span id="modalCredits" class="detail-value"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">分类：</span>
+                    <span id="modalCategory" class="detail-value"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">上课时间：</span>
+                    <div id="modalSchedule" class="schedule-list"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">关闭</button>
+                <button id="modalAddBtn" class="btn btn-primary" onclick="addFromModal()">添加到愿望清单</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+            document.addEventListener('DOMContentLoaded', function() {
+            let wishlist = new Map();
+            let allCourses = [];
+            let selectedCourses = [];
+            let searchTerm = '';
+            let selectedCategory = '';
+            let courseLimit = 0; // 限选门数，0表示未限制
+            
+            // 页面关闭时自动清除登录状态
+            window.addEventListener('beforeunload', function() {
+                navigator.sendBeacon('/api/logout');
+            });
+            
+            checkStatus();
+            
+            document.getElementById('refreshBtn').addEventListener('click', () => {
+                currentPage = 1;
+                fetchCourses();
+            });
+            document.getElementById('refreshBtn').addEventListener('click', fetchCourses);
+            document.getElementById('startGrabBtn').addEventListener('click', startGrabbing);
+            document.getElementById('stopGrabBtn').addEventListener('click', stopGrabbing);
+            document.getElementById('clearWishlist').addEventListener('click', clearWishlist);
+            document.getElementById('clearLogBtn').addEventListener('click', clearLog);
+            document.getElementById('refreshSelectedBtn').addEventListener('click', fetchSelectedCourses);
+            let searchTimeout = null;
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                searchTerm = e.target.value.toLowerCase();
+                document.getElementById('clearSearch').style.display = searchTerm ? 'flex' : 'none';
+                if (searchTimeout) clearTimeout(searchTimeout);
+                
+                searchTimeout = setTimeout(() => {
+                    renderCourses();
+                }, 200);
+            });
+            
+            window.clearSearch = function() {
+                document.getElementById('searchInput').value = '';
+                searchTerm = '';
+                document.getElementById('clearSearch').style.display = 'none';
+                renderCourses();
+            };
+            
+            window.onCategoryChange = function(cat) {
+                selectedCategory = selectedCategory === cat ? '' : cat;
+                renderCourses();
+            };
+            
+            async function checkStatus() {
+                try {
+                    const response = await fetch('/api/status');
+                    const data = await response.json();
+                    
+                    if (data.logged_in) {
+                        document.getElementById('loginNotice').style.display = 'none';
+                        document.getElementById('courseSection').style.display = 'flex';
+                        document.getElementById('statusIndicator').className = 'status-dot online';
+                        
+                        // 先获取学期信息（包含限选门数）
+                        await fetchSemesterInfo();
+                        
+                        // 然后获取其他数据
+                        fetchCourses();
+                        fetchSelectedCourses();
+                        startStatusPolling();
+                    } else {
+                        document.getElementById('loginNotice').style.display = 'flex';
+                        document.getElementById('courseSection').style.display = 'none';
+                        document.getElementById('statusIndicator').className = 'status-dot offline';
+                    }
+                } catch (error) {
+                    console.error('检查状态失败:', error);
+                }
+            }
+            
+            async function fetchCourses() {
+                document.getElementById('loading').style.display = 'flex';
+                document.getElementById('courseList').innerHTML = '';
+                
+                try {
+                    allCourses = [];
+                    let page = 1;
+                    const rows = 100;
+                    let total = 0;
+                    
+                    do {
+                        const response = await fetch(`/api/courses?page=${page}&rows=${rows}`);
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                            if (data.error && (data.error.includes('未登录') || data.error.includes('过期') || data.error.includes('session'))) {
+                                await logoutAndRedirect();
+                                return;
+                            }
+                            showError(data.error || '获取课程失败');
+                            return;
+                        }
+                        
+                        const courses = data.courses || [];
+                        if (page === 1) {
+                            total = data.total || 0;
+                        }
+                        
+                        allCourses = allCourses.concat(courses);
+                        page++;
+                        
+                        if (courses.length < rows) break;
+                    } while (allCourses.length < total);
+                    
+                    // 去重
+                    const seen = new Set();
+                    allCourses = allCourses.filter(c => {
+                        if (seen.has(c.kcrwdm)) return false;
+                        seen.add(c.kcrwdm);
+                        return true;
+                    });
+                    
+                    document.getElementById('courseTotal').textContent = allCourses.length;
+                    renderCourses();
+                } catch (error) {
+                    showError('请求失败: ' + error.message);
+                } finally {
+                    document.getElementById('loading').style.display = 'none';
+                }
+            }
+            
+            function renderCourses() {
+                const container = document.getElementById('courseList');
+                
+                let filtered = allCourses;
+                if (selectedCategory) {
+                    filtered = filtered.filter(c => (c.kcflmc || c.kcdlmc) === selectedCategory);
+                }
+                if (searchTerm) {
+                    filtered = filtered.filter(c => 
+                        (c.kcmc && c.kcmc.toLowerCase().includes(searchTerm)) ||
+                        (c.teaxm && c.teaxm.toLowerCase().includes(searchTerm))
+                    );
+                }
+                
+                if (filtered.length === 0) {
+                    container.innerHTML = '<div class="empty-table"><div class="empty-icon">📚</div><p>暂无课程</p></div>';
+                    return;
+                }
+                
+                container.innerHTML = `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="col-name">课程名称</th>
+                                <th class="col-teacher">教师</th>
+                                <th class="col-credits">学分</th>
+                                <th class="col-category">分类</th>
+                                <th class="col-quota">名额</th>
+                                <th class="col-action">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filtered.map(course => {
+                                const id = course.kcrwdm;
+                                const inWishlist = wishlist.has(id);
+                                const capacity = course.pkrs || 0;
+                                const enrolled = course.jxbrs || 0;
+                                const available = capacity - enrolled;
+                                const isFull = available <= 0;
+                                const cat = course.kcflmc || course.kcdlmc || '-';
+                                const isActive = selectedCategory === cat;
+                                
+                                return `
+                                    <tr class="${inWishlist ? 'selected' : ''} ${isFull ? 'full' : ''}">
+                                        <td class="col-name">
+                                            <div class="course-name-cell">${course.kcmc || '-'}</div>
+                                        </td>
+                                        <td class="col-teacher">${course.teaxm || '-'}</td>
+                                        <td class="col-credits">${course.xf || '-'}</td>
+                                        <td class="col-category"><span class="tag clickable ${isActive ? 'active' : ''}" onclick="onCategoryChange('${cat}')">${cat}</span></td>
+                                        <td class="col-quota">
+                                            <div class="quota-inline">
+                                                <span class="quota-num ${isFull ? 'full' : available < 5 ? 'low' : 'ok'}">${enrolled}/${capacity}</span>
+                                                ${isFull ? '<span class="quota-tag full">已满</span>' : available < 5 ? `<span class="quota-tag low">余${available}</span>` : ''}
+                                            </div>
+                                        </td>
+                                        <td class="col-action">
+                                            <button class="btn btn-detail btn-tiny" onclick="showCourseDetail('${id}', '${course.kcmc || ''}', '${course.teaxm || ''}', '${course.xf || ''}', '${course.kcflmc || course.kcdlmc || ''}')" title="查看详情">详情</button>
+                                            <button class="btn ${inWishlist ? 'btn-selected' : 'btn-add'} btn-tiny" 
+                                                    onclick="toggleWishlist('${id}')">
+                                                ${inWishlist ? '✓' : '+'}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+            
+
+            
+            window.toggleWishlist = function(id) {
+                if (wishlist.has(id)) {
+                    wishlist.delete(id);
+                } else {
+                    // 检查限选门数：已选课程 + 愿望清单 >= 限选门数
+                    if (courseLimit > 0) {
+                        const totalSelected = selectedCourses.length + wishlist.size;
+                        if (totalSelected >= courseLimit) {
+                            showError(`已达到限选门数上限（${courseLimit}门），当前已选${selectedCourses.length}门，愿望清单${wishlist.size}门`);
+                            return;
+                        }
+                    }
+                    
+                    const course = allCourses.find(c => c.kcrwdm === id);
+                    if (course) {
+                        wishlist.set(id, course);
+                    }
+                }
+                renderCourses();
+                renderWishlist();
+            };
+            
+            function renderWishlist() {
+                const container = document.getElementById('wishlist');
+                const clearBtn = document.getElementById('clearWishlist');
+                document.getElementById('wishlistCount').textContent = wishlist.size;
+                
+                if (wishlist.size === 0) {
+                    container.innerHTML = '<div class="empty-wishlist"><div class="empty-icon">📋</div><p>点击课程旁的「添加」按钮</p></div>';
+                    clearBtn.style.display = 'none';
+                    return;
+                }
+                
+                clearBtn.style.display = 'block';
+                container.innerHTML = Array.from(wishlist.entries()).map(([id, course], index) => {
+                    const capacity = course.pkrs || 0;
+                    const enrolled = course.jxbrs || 0;
+                    const available = capacity - enrolled;
+                    const isFull = available <= 0;
+                    
+                    return `
+                        <div class="wishlist-item ${isFull ? 'full' : ''}" draggable="true" data-id="${id}" data-index="${index}">
+                            <div class="drag-handle">⠿</div>
+                            <div class="wishlist-info">
+                                <div class="wishlist-name">${course.kcmc}</div>
+                                <div class="wishlist-meta">
+                                    <span>${course.teaxm || '-'}</span>
+                                    <span>${course.xf || '0'}学分</span>
+                                    <span class="${isFull ? 'text-danger' : 'text-success'}">${isFull ? '已满' : `余${available}`}</span>
+                                </div>
+                            </div>
+                            <div class="wishlist-actions">
+                                <button class="btn-move-up" onclick="moveWishlistItem(${index}, -1)" title="上移" ${index === 0 ? 'disabled' : ''}>↑</button>
+                                <button class="btn-move-down" onclick="moveWishlistItem(${index}, 1)" title="下移" ${index === wishlist.size - 1 ? 'disabled' : ''}>↓</button>
+                                <button class="btn-remove-icon" onclick="toggleWishlist('${id}')" title="移除">✕</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // 初始化拖拽
+                initDragAndDrop();
+            }
+            
+            function clearWishlist() {
+                wishlist.clear();
+                renderCourses();
+                renderWishlist();
+            }
+            
+            window.moveWishlistItem = function(index, direction) {
+                const entries = Array.from(wishlist.entries());
+                const newIndex = index + direction;
+                
+                if (newIndex < 0 || newIndex >= entries.length) return;
+                
+                // 交换位置
+                [entries[index], entries[newIndex]] = [entries[newIndex], entries[index]];
+                
+                // 重建Map
+                wishlist = new Map(entries);
+                renderWishlist();
+            };
+            
+            function initDragAndDrop() {
+                const container = document.getElementById('wishlist');
+                const items = container.querySelectorAll('.wishlist-item');
+                let draggedItem = null;
+                let draggedIndex = -1;
+                
+                items.forEach(item => {
+                    item.addEventListener('dragstart', (e) => {
+                        draggedItem = item;
+                        draggedIndex = parseInt(item.dataset.index);
+                        item.classList.add('dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                    });
+                    
+                    item.addEventListener('dragend', () => {
+                        if (draggedItem) {
+                            draggedItem.classList.remove('dragging');
+                        }
+                        draggedItem = null;
+                        draggedIndex = -1;
+                        
+                        // 移除所有drag-over样式
+                        items.forEach(i => i.classList.remove('drag-over'));
+                    });
+                    
+                    item.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        
+                        const targetIndex = parseInt(item.dataset.index);
+                        if (targetIndex !== draggedIndex) {
+                            item.classList.add('drag-over');
+                        }
+                    });
+                    
+                    item.addEventListener('dragleave', () => {
+                        item.classList.remove('drag-over');
+                    });
+                    
+                    item.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        item.classList.remove('drag-over');
+                        
+                        const targetIndex = parseInt(item.dataset.index);
+                        if (draggedIndex !== -1 && draggedIndex !== targetIndex) {
+                            const entries = Array.from(wishlist.entries());
+                            const [removed] = entries.splice(draggedIndex, 1);
+                            entries.splice(targetIndex, 0, removed);
+                            
+                            wishlist = new Map(entries);
+                            renderWishlist();
+                        }
+                    });
+                });
+            }
+            
+            async function fetchSelectedCourses() {
+                try {
+                    const response = await fetch('/api/courses/selected');
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        selectedCourses = data.courses || [];
+                        renderSelectedCourses(selectedCourses);
+                        renderWishlist(); // 更新愿望清单显示
+                    } else {
+                        if (data.error && (data.error.includes('未登录') || data.error.includes('过期') || data.error.includes('session'))) {
+                            await logoutAndRedirect();
+                        }
+                    }
+                } catch (error) {
+                    console.error('获取已选课程失败:', error);
+                }
+            }
+            
+            async function fetchSemesterInfo() {
+                try {
+                    const response = await fetch('/api/courses/pageinfo');
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        parseSemesterInfo(data.html);
+                    }
+                } catch (error) {
+                    console.error('获取学期信息失败:', error);
+                }
+            }
+            
+            function parseSemesterInfo(html) {
+                const container = document.getElementById('semesterInfo');
+                
+                // 解析选课学期
+                const semesterMatch = html.match(/选课学期:([^,]+)/);
+                const semester = semesterMatch ? semesterMatch[1].trim() : '未知';
+                
+                // 解析选课类型
+                const typeMatch = html.match(/,([^,]+),现在是/);
+                const courseType = typeMatch ? typeMatch[1].trim() : '未知';
+                
+                // 解析选课阶段
+                const stageMatch = html.match(/现在是(.+?)时间/);
+                const stage = stageMatch ? stageMatch[1].trim() : '未知';
+                
+                // 解析限选门数 - 支持多种格式
+                let limit = 0;
+                const limitMatch1 = html.match(/限选\s*(\d+)/);
+                const limitMatch2 = html.match(/限选.*?(\d+).*?门/);
+                const limitMatch3 = html.match(/限选.*?(\d+)/);
+                
+                if (limitMatch1) {
+                    limit = parseInt(limitMatch1[1]);
+                } else if (limitMatch2) {
+                    limit = parseInt(limitMatch2[1]);
+                } else if (limitMatch3) {
+                    limit = parseInt(limitMatch3[1]);
+                }
+                courseLimit = limit;
+                
+                // 解析退选状态
+                const canDrop = html.includes('可退选');
+                
+                container.innerHTML = `
+                    <div class="info-tags">
+                        <span class="info-tag">📅 ${semester}</span>
+                        <span class="info-tag">📚 ${courseType}</span>
+                        <span class="info-tag">⏰ ${stage}</span>
+                        <span class="info-tag">🎯 限选${limit}门</span>
+                        ${canDrop ? '<span class="info-tag success">✓ 可退选</span>' : '<span class="info-tag danger">✗ 不可退选</span>'}
+                    </div>
+                `;
+            }
+            
+            function renderSelectedCourses(courses) {
+                const container = document.getElementById('selectedCourses');
+                const countBadge = document.getElementById('selectedCount');
+                
+                countBadge.textContent = courseLimit > 0 ? `${courses.length}/${courseLimit}` : courses.length;
+                
+                if (courses.length === 0) {
+                    container.innerHTML = '<div class="empty-log"><p>暂无已选课程</p></div>';
+                    return;
+                }
+                
+                container.innerHTML = courses.map(course => {
+                    const capacity = course.pkrs || 0;
+                    const enrolled = course.jxbrs || 0;
+                    
+                    return `
+                        <div class="selected-item">
+                            <div class="selected-info">
+                                <div class="selected-name">${course.kcmc || '-'}</div>
+                                <div class="selected-meta">
+                                    <span>${course.teaxm || '-'}</span>
+                                    <span>${course.xf || '0'}学分</span>
+                                    <span>${enrolled}/${capacity}人</span>
+                                </div>
+                                <div class="selected-category">${course.kcflmc || course.kcdlmc || '-'}</div>
+                            </div>
+                            <button class="btn-drop" onclick="dropCourse('${course.kcrwdm}', '${course.kcmc}', '${course.jxbdm}')" title="退选">退选</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            window.dropCourse = async function(courseId, courseName, jxbdm) {
+                if (!confirm(`确定要退选「${courseName}」吗？`)) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/courses/drop', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ course_id: courseId, course_name: courseName, jxbdm: jxbdm })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        showSuccess(data.message || '退选成功');
+                        fetchSelectedCourses();
+                    } else {
+                        showError(data.error || '退选失败');
+                    }
+                } catch (error) {
+                    showError('请求失败: ' + error.message);
+                }
+            };
+            
+            async function startGrabbing() {
+                if (wishlist.size === 0) {
+                    showError('请先添加课程到愿望清单');
+                    return;
+                }
+                
+                // 检查是否已达到限选门数
+                if (courseLimit > 0 && selectedCourses.length >= courseLimit) {
+                    showError(`已选课程已达上限（${courseLimit}门），无需抢课`);
+                    return;
+                }
+                
+                const interval = parseInt(document.getElementById('interval').value) || 1;
+                
+                // 按照wishlist顺序获取课程IDs
+                const courseIds = Array.from(wishlist.keys());
+                const courseNames = {};
+                wishlist.forEach((course, id) => {
+                    courseNames[id] = course.kcmc;
+                });
+                
+                try {
+                    const response = await fetch('/api/grab/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            course_ids: courseIds,
+                            course_names: courseNames,
+                            interval: interval
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        document.getElementById('startGrabBtn').style.display = 'none';
+                        document.getElementById('stopGrabBtn').style.display = 'flex';
+                    } else {
+                        const data = await response.json();
+                        showError(data.error || '启动失败');
+                    }
+                } catch (error) {
+                    showError('请求失败: ' + error.message);
+                }
+            }
+            
+            async function stopGrabbing() {
+                try {
+                    await fetch('/api/grab/stop', { method: 'POST' });
+                    document.getElementById('startGrabBtn').style.display = 'flex';
+                    document.getElementById('stopGrabBtn').style.display = 'none';
+                } catch (error) {
+                    showError('停止失败: ' + error.message);
+                }
+            }
+            
+            async function clearLog() {
+                try {
+                    await fetch('/api/grab/clear', { method: 'POST' });
+                } catch (error) {}
+                
+                const container = document.getElementById('grabResults');
+                container.innerHTML = '<div class="empty-log"><p>暂无日志</p></div>';
+                document.getElementById('logCount').textContent = '0';
+            }
+            
+            function startStatusPolling() {
+                setInterval(async () => {
+                    try {
+                        const response = await fetch('/api/grab/status');
+                        const data = await response.json();
+                        
+                        if (data.results && data.results.length > 0) {
+                            renderResults(data.results);
+                        }
+                    } catch (error) {}
+                }, 2000);
+            }
+            
+            function renderResults(results) {
+                const container = document.getElementById('grabResults');
+                const countBadge = document.getElementById('logCount');
+                const latest = results.slice(-20).reverse();
+                
+                countBadge.textContent = results.length;
+                
+                if (latest.length === 0) {
+                    container.innerHTML = '<div class="empty-log"><p>暂无日志</p></div>';
+                    return;
+                }
+                
+                container.innerHTML = latest.map(r => `
+                    <div class="log-entry ${r.success ? 'success' : 'fail'}">
+                        <span class="log-icon">${r.success ? '✓' : '✗'}</span>
+                        <span class="log-msg">${r.course_name}: ${r.message}</span>
+                        <span class="log-time">${new Date(r.time).toLocaleTimeString()}</span>
+                    </div>
+                `).join('');
+            }
+            
+            async function logoutAndRedirect() {
+                try {
+                    await fetch('/api/logout', { method: 'POST' });
+                } catch (e) {}
+                window.location.href = '/import';
+            }
+            
+            // 模态框相关函数
+            let currentDetailCourseId = null;
+            
+            window.showCourseDetail = async function(courseId, name, teacher, credits, category) {
+                currentDetailCourseId = courseId;
+                
+                // 填充基本信息
+                document.getElementById('modalCourseName').textContent = name || '未知课程';
+                document.getElementById('modalTeacher').textContent = teacher || '-';
+                document.getElementById('modalCredits').textContent = credits || '-';
+                document.getElementById('modalCategory').textContent = category || '-';
+                
+                // 清空时间列表
+                document.getElementById('modalSchedule').innerHTML = '<span class="detail-value">加载中...</span>';
+                
+                // 显示模态框
+                document.getElementById('courseDetailModal').style.display = 'flex';
+                
+                // 获取课程上课时间
+                try {
+                    const response = await fetch(`/api/courses/schedule?kcrwdm=${courseId}`);
+                    const data = await response.json();
+                    
+                    const scheduleContainer = document.getElementById('modalSchedule');
+                    
+                    if (response.ok && data.schedules && data.schedules.length > 0) {
+                        const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+                        
+                        // 解析周次范围
+                        const weeks = data.schedules.map(s => parseInt(s.zc)).filter(w => !isNaN(w));
+                        const minWeek = Math.min(...weeks);
+                        const maxWeek = Math.max(...weeks);
+                        const weekRange = minWeek === maxWeek ? `第${minWeek}周` : `第${minWeek}-${maxWeek}周`;
+                        
+                        // 按星期分组
+                        const grouped = {};
+                        data.schedules.forEach(s => {
+                            const weekDay = weekDays[parseInt(s.xq) - 1] || s.xq;
+                            if (!grouped[weekDay]) {
+                                grouped[weekDay] = new Set();
+                            }
+                            s.jcdm2.split(',').forEach(j => grouped[weekDay].add(j));
+                        });
+                        
+                        scheduleContainer.innerHTML = `
+                            <div class="schedule-summary">
+                                <span class="schedule-weeks">${weekRange}</span>
+                            </div>
+                            <div class="schedule-detail">
+                                ${Object.entries(grouped).map(([day, periods]) => {
+                                    const sortedPeriods = Array.from(periods).sort();
+                                    return `<span class="schedule-item">${day} ${sortedPeriods.join(',')}节</span>`;
+                                }).join('')}
+                            </div>
+                        `;
+                    } else {
+                        scheduleContainer.innerHTML = '<span class="detail-value">暂无上课时间信息</span>';
+                    }
+                } catch (error) {
+                    document.getElementById('modalSchedule').innerHTML = '<span class="detail-value">获取失败</span>';
+                }
+            };
+            
+            window.closeModal = function() {
+                document.getElementById('courseDetailModal').style.display = 'none';
+                currentDetailCourseId = null;
+            };
+            
+            window.addFromModal = function() {
+                if (currentDetailCourseId) {
+                    toggleWishlist(currentDetailCourseId);
+                    closeModal();
+                }
+            };
+            
+            // 点击模态框外部关闭
+            document.getElementById('courseDetailModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeModal();
+                }
+            });
+            
+            function showError(message) {
+                const div = document.createElement('div');
+                div.className = 'toast error';
+                div.textContent = message;
+                document.body.appendChild(div);
+                setTimeout(() => div.remove(), 3000);
+            }
+            
+            function showSuccess(message) {
+                const div = document.createElement('div');
+                div.className = 'toast success';
+                div.textContent = message;
+                document.body.appendChild(div);
+                setTimeout(() => div.remove(), 3000);
+            }
+        });
+    </script>
+</body>
+</html>

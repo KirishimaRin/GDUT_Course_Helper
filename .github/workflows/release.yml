@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.4'
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build
+        run: |
+          cp config.yaml.example config.yaml
+          
+          # Windows
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o course-helper.exe ./cmd/server/
+          zip -r course-helper-${{ github.ref_name }}-windows-amd64.zip course-helper.exe config.yaml.example stop.bat web/ README.md
+          rm course-helper.exe
+          
+          # Linux
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o course-helper ./cmd/server/
+          tar -czf course-helper-${{ github.ref_name }}-linux-amd64.tar.gz course-helper config.yaml.example stop.sh web/ README.md
+          rm course-helper
+          
+          # macOS
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o course-helper ./cmd/server/
+          tar -czf course-helper-${{ github.ref_name }}-darwin-amd64.tar.gz course-helper config.yaml.example stop.sh web/ README.md
+          rm course-helper
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            course-helper-${{ github.ref_name }}-windows-amd64.zip
+            course-helper-${{ github.ref_name }}-linux-amd64.tar.gz
+            course-helper-${{ github.ref_name }}-darwin-amd64.tar.gz
+          generate_release_notes: true

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>导入 JSESSIONID - GDUT 抢课助手</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="import-container">
+        <div class="import-card">
+            <a href="/" class="back-link">← 返回首页</a>
+            <h1>导入 JSESSIONID</h1>
+            <p class="subtitle">连接你的教务系统账号</p>
+
+            <div class="instructions">
+                <h3>如何获取 JSESSIONID？</h3>
+                <ol>
+                    <li>在浏览器中打开 <a href="https://jxfw.gdut.edu.cn/" target="_blank">广东工业大学教务系统</a> 并登录</li>
+                    <li>按 <kbd>F12</kbd> 打开开发者工具</li>
+                    <li>点击顶部的 <strong>Application（应用程序）</strong> 标签</li>
+                    <li>在左侧找到 <strong>Cookies</strong> 并展开</li>
+                    <li>点击 <code>https://jxfw.gdut.edu.cn</code></li>
+                    <li>找到 <code>JSESSIONID</code>，双击它的值并复制</li>
+                </ol>
+            </div>
+
+            <form id="importForm" class="form">
+                <div class="form-group">
+                    <label for="jsessionid">JSESSIONID</label>
+                    <input type="text" id="jsessionid" class="form-input" placeholder="粘贴 JSESSIONID 的值..." required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full btn-lg">保存并登录</button>
+            </form>
+
+            <div id="status" class="status" style="display: none;">
+                <span id="statusIcon" class="status-icon"></span>
+                <span id="statusText"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('importForm');
+            const status = document.getElementById('status');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            
+            // 延迟检查登录状态，避免logout请求未完成就跳转
+            setTimeout(() => {
+                checkAndRedirect();
+            }, 500);
+            
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const jsessionid = document.getElementById('jsessionid').value.trim();
+                
+                if (!jsessionid) {
+                    showStatus('error', '✗', '请输入 JSESSIONID');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/jsessionid', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ jsessionid: jsessionid })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        showStatus('success', '✓', '导入成功！正在跳转...');
+                        setTimeout(() => {
+                            window.location.href = '/courses';
+                        }, 1000);
+                    } else {
+                        showStatus('error', '✗', data.error || '导入失败');
+                    }
+                } catch (error) {
+                    showStatus('error', '✗', '请求失败: ' + error.message);
+                }
+            });
+            
+            async function checkAndRedirect() {
+                try {
+                    const response = await fetch('/api/status');
+                    const data = await response.json();
+                    
+                    if (data.logged_in) {
+                        // 已登录，直接跳转到课程页面
+                        window.location.href = '/courses';
+                        return;
+                    }
+                } catch (error) {}
+            }
+            
+            function showStatus(type, icon, text) {
+                status.style.display = 'flex';
+                status.className = 'status status-' + type;
+                statusIcon.textContent = icon;
+                statusText.textContent = text;
+            }
+        });
+    </script>
+</body>
+</html>
