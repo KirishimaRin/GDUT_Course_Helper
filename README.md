@@ -65,7 +65,7 @@ go build -o course-helper.exe ./cmd/server/
 
 ## 使用说明
 
-1. 打开 GDUT 教务系统 (https://jxfw.gdut.edu.cn)，登录后按 F12 打开开发者工具
+1. 打开广东工业大学教务系统 <https://jxfw.gdut.edu.cn>，登录后按 F12 打开开发者工具
 2. 在 Network 面板找到任意请求，复制 Cookie 中的 `JSESSIONID` 值
 3. 在本系统导入页面粘贴 JSESSIONID
 4. 浏览课程，点击分类标签筛选，输入关键词搜索
