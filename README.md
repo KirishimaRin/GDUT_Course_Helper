@@ -24,11 +24,11 @@
 
 ### 方式一：直接下载（推荐）
 
-从 [Releases](https://github.com/KirishimaRin/GDUT_Course_helper/releases) 下载对应平台的压缩包：
+从 [Releases](https://github.com/KirishimaRin/GDUT_Course_Helper/releases) 下载对应平台的最新版本压缩包。发布包按 `vX.Y.Z` 版本号持久化命名，例如：
 
-- `course-helper-v1.0.0-windows-amd64.zip` - Windows
-- `course-helper-v1.0.0-linux-amd64.tar.gz` - Linux
-- `course-helper-v1.0.0-darwin-amd64.tar.gz` - macOS
+- `course-helper-vX.Y.Z-windows-amd64.zip` - Windows
+- `course-helper-vX.Y.Z-linux-amd64.tar.gz` - Linux
+- `course-helper-vX.Y.Z-darwin-amd64.tar.gz` - macOS
 
 解压后运行：
 ```bash
