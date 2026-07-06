@@ -34,6 +34,9 @@ config.yaml
 *.swp
 *.swo
 
+# Documentation (local only)
+docs/
+
 # OS
 .DS_Store
 Thumbs.db
