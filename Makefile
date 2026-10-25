@@ -1,19 +1,16 @@
-VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-LDFLAGS := -s -w -X main.version=$(VERSION)
+.PHONY: run build clean
 
-.PHONY: run build build-all clean
-
+# 桌面端开发模式（Vite 热更新 + Go 热重启）
 run:
-	go run ./cmd/server/
+	bun run dev
 
+# 构建当前平台：build/<os>-<arch>/ 下 exe/安装包
 build:
-	go build -ldflags="$(LDFLAGS)" -o course-helper.exe ./cmd/server/
+	bun run build
 
+# 跨平台构建（无 cgo，任何机器可出全平台）
 build-all:
-	GOOS=windows GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o build/course-helper-windows-amd64.exe ./cmd/server/
-	GOOS=linux GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o build/course-helper-linux-amd64 ./cmd/server/
-	GOOS=darwin GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o build/course-helper-darwin-amd64 ./cmd/server/
+	bun run build -- -platform windows/amd64,linux/amd64,darwin/arm64
 
 clean:
-	rm -rf build/
-	rm -f course-helper.exe course-helper
+	rm -rf build/ dist/ .mygo/

@@ -1,6 +1,20 @@
 # GDUT 抢课助手
 
-广东工业大学教务系统自动抢课工具，支持课程浏览、收藏、并发抢课。
+广东工业大学教务系统自动抢课工具（桌面版），支持课程浏览、收藏、并发抢课、系统托盘后台运行。
+
+基于 [mygo](https://github.com/egoist/mygo) 构建：Go 后端通过类型化 IPC 直接驱动 WebView2 前端，单文件分发，无浏览器依赖。
+
+## 功能特性
+
+- JSESSIONID 登录（从浏览器复制）
+- 课程列表浏览，支持搜索和分类筛选
+- 课程详情查看（上课时间、周次、余量）
+- 愿望清单（拖拽排序，持久化保存，自动校验限选门数）
+- 并发抢课（最多 5 个 goroutine），可调抢课间隔
+- 已选课程管理（退选，两步确认）
+- 实时抢课日志（事件推送，无需轮询）
+- **关窗最小化到托盘，抢课成功弹系统通知**
+- 单实例运行，明暗主题跟随系统
 
 ## 界面预览
 
@@ -9,121 +23,66 @@
 | ![](assets/1.png) |
 | ![](assets/2.png) |
 
-## 功能特性
-
-- JSESSIONID 登录（从浏览器复制）
-- 课程列表浏览，支持搜索和分类筛选
-- 课程详情查看（上课时间、周次）
-- 课程分类筛选
-- 收藏夹管理（拖拽排序）
-- 并发抢课（最多 5 个 goroutine）
-- 已选课程管理（退选）
-- 实时抢课日志
+（截图为 v1 web 版界面，v2 桌面版界面已重新设计）
 
 ## 快速开始
 
 ### 方式一：直接下载（推荐）
 
-从 [Releases](https://github.com/KirishimaRin/GDUT_Course_Helper/releases) 下载对应平台的最新版本压缩包。发布包按 `vX.Y.Z` 版本号持久化命名，例如：
+从 [Releases](https://github.com/KirishimaRin/GDUT_Course_Helper/releases) 下载对应平台的最新版本：
 
-- `course-helper-vX.Y.Z-windows-amd64.zip` - Windows
-- `course-helper-vX.Y.Z-linux-amd64.tar.gz` - Linux
-- `course-helper-vX.Y.Z-darwin-amd64.tar.gz` - macOS
+- `GDUT Course Helper Setup x.y.z amd64.exe` - Windows 安装包
+- `GDUT Course Helper.exe` - Windows 便携版
+- Linux / macOS 同目录下有对应产物（deb / app+dmg）
 
-解压后运行：
-```bash
-# Windows
-course-helper.exe
+双击运行即可，无需安装浏览器或其他依赖（Windows 10 需 WebView2 Runtime，Windows 11 内置）。
 
-# Linux/macOS
-./course-helper
-```
-
-### 方式二：源码编译
+### 方式二：源码运行
 
 #### 环境要求
 
-- Go 1.21+
-- 现代浏览器
-
-#### 安装运行
+- Go 1.27.3+（首次构建自动下载对应 toolchain）
+- [Bun](https://bun.sh) 1.1+
+- Windows 10+ / macOS 12+ / Linux（WebKitGTK 4.1）
 
 ```bash
-# 克隆项目
-git clone https://github.com/KirishimaRin/GDUT_Course_helper.git
-cd GDUT_Course_helper
+git clone https://github.com/KirishimaRin/GDUT_Course_Helper.git
+cd GDUT_Course_Helper
+bun install
 
-# 复制配置文件
-cp config.yaml.example config.yaml
-
-# 安装依赖
-go mod tidy
-
-# 使用 Makefile（推荐）
-make run
-
-# 或手动编译运行
-go build -o course-helper.exe ./cmd/server/
-./course-helper.exe
+make run     # 开发模式：Vite 热更新 + Go 热重启
+make build   # 构建当前平台，产物在 build/<os>-<arch>/
+make build-all  # 交叉编译全平台（无 cgo，任意机器可出全平台）
 ```
-
-### 访问
-
-打开浏览器访问 http://localhost:32555
 
 ## 使用说明
 
 1. 打开广东工业大学教务系统 <https://jxfw.gdut.edu.cn>，登录后按 F12 打开开发者工具
-2. 在 Network 面板找到任意请求，复制 Cookie 中的 `JSESSIONID` 值
-3. 在本系统导入页面粘贴 JSESSIONID
+2. 在 应用/Network 面板找到 Cookie 中的 `JSESSIONID` 值并复制
+3. 启动本应用，粘贴 JSESSIONID 导入
 4. 浏览课程，点击分类标签筛选，输入关键词搜索
-5. 将想抢的课程加入收藏夹
-6. 点击「开始抢课」，系统自动并发抢课
-7. 抢到的课程会出现在右侧已选列表
+5. 将想抢的课程点 ★ 或「抢」加入愿望清单（左栏可拖拽排序）
+6. 点击「开始抢课」，应用自动并发抢课
+7. 关闭窗口应用仍在托盘运行，抢到课会弹系统通知
 
 ## 项目结构
 
 ```
-Course_helper/
-├── .github/workflows/      # GitHub Actions 自动构建
-├── cmd/server/              # 主程序入口
+GDUT_Course_Helper/
+├── .github/workflows/      # GitHub Actions 多平台发布
+├── main.go                 # mygo 应用入口（窗口/托盘/通知）
 ├── internal/
 │   ├── auth/               # JSESSIONID 认证
-│   ├── grabber/            # 抢课核心逻辑
-│   └── handler/            # HTTP 处理器
-├── web/
-│   ├── static/css/         # 样式文件
-│   └── templates/          # HTML 模板
-├── config.yaml.example     # 配置文件示例
-├── Makefile                # 构建命令
-└── README.md
+│   ├── grabber/            # 抢课核心逻辑（并发、结果回调）
+│   └── service/            # IPC service 层（handler 的替代）
+├── src/                    # 前端（Vite + TypeScript）
+│   ├── mygo.ts             # 自动生成的类型化 IPC client
+│   ├── main.ts             # 入口：登录路由 + 事件订阅
+│   ├── app.ts              # 主视图
+│   └── style.css           # 设计 token + 组件
+├── mygo.config.ts          # mygo 应用配置
+└── Makefile
 ```
-
-## API 接口
-
-### 认证
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | /api/login | 导入 JSESSIONID |
-| POST | /api/logout | 退出登录 |
-| GET | /api/status | 登录状态 |
-
-### 课程
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | /api/courses | 课程列表（分页） |
-| GET | /api/courses/selected | 已选课程 |
-| POST | /api/courses/drop | 退选课程 |
-| GET | /api/courses/schedule | 课程上课时间 |
-| GET | /api/courses/schedules | 所有已选课程时间 |
-
-### 抢课
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | /api/grab/start | 开始抢课 |
-| POST | /api/grab/stop | 停止抢课 |
-| GET | /api/grab/status | 抢课状态 |
-| POST | /api/grab/clear | 清空结果 |
 
 ## 抢课逻辑
 
@@ -132,24 +91,22 @@ Course_helper/
 - 时间冲突：自动移除该课程
 - 超出限选：自动移除该课程
 - 已选课程：自动移除
+- 全部处理完自动停止并通知
 
 ## 开发命令
 
 ```bash
-make run          # 本地运行
-make build        # 编译当前平台
+make run          # 开发模式
+make build        # 构建当前平台
 make build-all    # 交叉编译所有平台
 make clean        # 清理构建产物
+bun x tsc --noEmit   # 前端类型检查
 ```
 
 ## 测试环境
 
-本工具仅在本机环境下测试通过：
-
-- **系统**：Windows 11 家庭版 中文版（Build 26100）
+- **系统**：Windows 11（Build 26300）
 - **架构**：AMD64
-- **CPU**：AMD Ryzen 9 7940HX with Radeon Graphics
-- **内存**：16 GB
 
 其他平台（Linux / macOS）未做完整测试，可能存在兼容性问题。
 
@@ -165,5 +122,3 @@ make clean        # 清理构建产物
 4. **责任限制**：作者不对因使用本工具产生的任何直接或间接损失承担责任
 
 如您不同意上述条款，请立即停止使用并删除本工具。
-
-

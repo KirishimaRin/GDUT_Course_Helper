@@ -67,6 +67,8 @@ type Grabber struct {
 	running  bool
 	mutex    sync.Mutex
 	stopChan chan bool
+	onResult func(GrabResult)
+	onStop   func(reason string)
 }
 
 func New(client *http.Client) *Grabber {
@@ -74,6 +76,20 @@ func New(client *http.Client) *Grabber {
 		client:   client,
 		stopChan: make(chan bool),
 	}
+}
+
+// SetOnResult 注册抢课结果回调（每次尝试后触发）
+func (g *Grabber) SetOnResult(f func(GrabResult)) {
+	g.mutex.Lock()
+	g.onResult = f
+	g.mutex.Unlock()
+}
+
+// SetOnStop 注册抢课结束回调，reason 为 "stopped"（手动停止）或 "completed"（全部选完）
+func (g *Grabber) SetOnStop(f func(reason string)) {
+	g.mutex.Lock()
+	g.onStop = f
+	g.mutex.Unlock()
 }
 
 // FetchCourses 获取课程列表（分页）
@@ -497,6 +513,10 @@ func (g *Grabber) StartGrabbing(courseIDs []string, courseNames map[string]strin
 	g.mutex.Unlock()
 
 	go func() {
+		g.mutex.Lock()
+		onResult, onStop := g.onResult, g.onStop
+		g.mutex.Unlock()
+
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
@@ -513,6 +533,9 @@ func (g *Grabber) StartGrabbing(courseIDs []string, courseNames map[string]strin
 				g.mutex.Lock()
 				g.running = false
 				g.mutex.Unlock()
+				if onStop != nil {
+					onStop("stopped")
+				}
 				return
 			case <-ticker.C:
 				var wg sync.WaitGroup
@@ -532,6 +555,10 @@ func (g *Grabber) StartGrabbing(courseIDs []string, courseNames map[string]strin
 						mu.Lock()
 						g.results = append(g.results, result)
 						mu.Unlock()
+
+						if onResult != nil {
+							onResult(result)
+						}
 
 						if result.Success {
 							fmt.Printf("[%s] ✓ 选课成功: %s\n", time.Now().Format("15:04:05"), name)
@@ -578,6 +605,9 @@ func (g *Grabber) StartGrabbing(courseIDs []string, courseNames map[string]strin
 					g.mutex.Lock()
 					g.running = false
 					g.mutex.Unlock()
+					if onStop != nil {
+						onStop("completed")
+					}
 					return
 				}
 			}

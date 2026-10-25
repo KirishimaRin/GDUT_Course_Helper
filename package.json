@@ -1,0 +1,21 @@
+{
+  "name": "gdut-course-helper",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "mygo dev",
+    "dev:web": "vite",
+    "build": "mygo build",
+    "build:web": "vite build"
+  },
+  "dependencies": {
+    "lucide": "^1.61.0",
+    "mygo-runtime": "^0.6.4"
+  },
+  "devDependencies": {
+    "mygo-cli": "^0.6.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  }
+}
