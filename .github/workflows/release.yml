@@ -33,11 +33,17 @@ jobs:
       - name: Build all platforms
         run: bun run build -- -platform windows/amd64,linux/amd64,darwin/arm64
 
+      # .app 是目录，上传工具只收单文件，打成 zip；dmg 需要 hdiutil，仅 macOS 可做
+      - name: Zip macOS bundle
+        run: |
+          cd build/darwin-arm64
+          zip -qry "GDUT-Course-Helper-${GITHUB_REF_NAME}-mac-arm64.zip" "GDUT Course Helper.app"
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             build/windows-amd64/*
             build/linux-amd64/*
-            build/darwin/arm64/*
+            build/darwin-arm64/*.zip
           generate_release_notes: true
