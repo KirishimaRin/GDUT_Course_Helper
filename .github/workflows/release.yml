@@ -24,7 +24,7 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Install mygo CLI
-        run: go install github.com/egoist/mygo/cmd/mygo@latest
+        run: go install github.com/egoist/mygo/cmd/mygo@v0.6.4
 
       - name: Install frontend dependencies
         run: bun install
